@@ -22,9 +22,10 @@ LIB           = libswPlugin.a
 CC            = gcc
 INCLUDE       = -I..
 DFLAGS        =
-CFLAGS        = -O2 -Wall -fPIC -Wno-unused-function -fstack-protector-all $(DFLAGS) $(INCLUDE)
+CFLAGS        = -O2 -Wall -fPIC -Wno-unused-function -fstack-protector-all $(DFLAGS) $(INCLUDE) -MMD -MP
 LIB_SOURCES   = swPlugin.c
 LIB_OBJS      = $(LIB_SOURCES:c=o)
+LIB_DEPS      = $(LIB_SOURCES:c=d)
 
 SO_LDFLAGS    = -L../kargs
 SO_LIBS       = -lkargs -ldl -lpthread
@@ -54,7 +55,9 @@ $(LIB_SO):	$(LIB_OBJS) $(LIB_SOURCES)
 						$(CC) -shared $(LIB_OBJS) -o $(LIB_SO) $(SO_LDFLAGS) $(SO_LIBS) $(SO_RPATH)
 
 %.o: %.c
-						$(CC) $(CFLAGS) -c $^ -o $@
+						$(CC) $(CFLAGS) -c $< -o $@
 
 %.i: %.c
 						$(CC) $(CFLAGS) -c $^ -E > $@
+
+-include $(LIB_DEPS)
