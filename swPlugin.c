@@ -110,7 +110,7 @@ void* swPluginOpen(const char* path, const char* symbolName, char* errorBuf, int
   if (access(path, F_OK) != 0)
   {
     if (errorBuf != NULL)
-      snprintf(errorBuf, errorBufSize, "plugin not found: '%s'", path);
+      snprintf(errorBuf, errorBufSize, "not found");
     return NULL;
   }
 
