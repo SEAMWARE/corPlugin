@@ -1,8 +1,8 @@
-#ifndef SWPLUGIN_SWPLUGIN_H_
-#define SWPLUGIN_SWPLUGIN_H_
+#ifndef CORPLUGIN_H_
+#define CORPLUGIN_H_
 
 //
-// FILE            swPlugin.h
+// FILE            corPlugin.h
 //
 // AUTHOR          Ken Zangelin
 //
@@ -25,83 +25,83 @@
 
 // -----------------------------------------------------------------------------
 //
-// swPluginVersion - return the library version string
+// corPluginVersion - return the library version string
 //
-extern const char* swPluginVersion(void);
+extern const char* corPluginVersion(void);
 
 
 
 // -----------------------------------------------------------------------------
 //
-// swPluginSetBaseDir - set the plugin base directory and env var override
+// corPluginSetBaseDir - set the plugin base directory and env var override
 //
-// Call once at startup before any other swPlugin function.
+// Call once at startup before any other corPlugin function.
 // The env var (if set) overrides defaultDir at runtime.
 // Returns the resolved base directory.
 //
-extern const char* swPluginSetBaseDir(const char* defaultDir, const char* envVarName);
+extern const char* corPluginSetBaseDir(const char* defaultDir, const char* envVarName);
 
 
 
 // -----------------------------------------------------------------------------
 //
-// swPluginBaseDir - get the current plugin base directory
+// corPluginBaseDir - get the current plugin base directory
 //
-extern const char* swPluginBaseDir(void);
+extern const char* corPluginBaseDir(void);
 
 
 
 // -----------------------------------------------------------------------------
 //
-// swPluginOpen - dlopen a .so file and look up a symbol by name
+// corPluginOpen - dlopen a .so file and look up a symbol by name
 //
 // Returns the symbol pointer on success, NULL on failure.
-// Tracks handles internally for cleanup via swPluginCloseAll().
+// Tracks handles internally for cleanup via corPluginCloseAll().
 // On failure, writes an error message to errorBuf (if not NULL).
 //
-extern void* swPluginOpen(const char* path, const char* symbolName, char* errorBuf, int errorBufSize);
+extern void* corPluginOpen(const char* path, const char* symbolName, char* errorBuf, int errorBufSize);
 
 
 
 // -----------------------------------------------------------------------------
 //
-// swPluginCloseAll - dlclose all previously opened plugin handles
+// corPluginCloseAll - dlclose all previously opened plugin handles
 //
-extern void swPluginCloseAll(void);
+extern void corPluginCloseAll(void);
 
 
 
 // -----------------------------------------------------------------------------
 //
-// swPluginScanNames - scan a directory for .so files, return names as separator-delimited string
+// corPluginScanNames - scan a directory for .so files, return names as separator-delimited string
 //
 // Writes names (with .so suffix stripped) joined by `sep` into buf.
-// E.g. swPluginScanNames(".../db/currentState", '|', buf, 256) -> "dummy|mongoc"
+// E.g. corPluginScanNames(".../db/currentState", '|', buf, 256) -> "dummy|mongoc"
 // Returns buf on success, NULL if directory doesn't exist or has no .so files.
 //
-extern const char* swPluginScanNames(const char* dirPath, char sep, char* buf, int bufSize);
+extern const char* corPluginScanNames(const char* dirPath, char sep, char* buf, int bufSize);
 
 
 
 // -----------------------------------------------------------------------------
 //
-// swPluginResolve - resolve a short name to a full .so path
+// corPluginResolve - resolve a short name to a full .so path
 //
 // category/subcategory/name  -> {baseDir}/{category}/{subcategory}/{name}.so
 // If subcategory is NULL:      {baseDir}/{category}/{name}.so
 // If name contains '/', it's treated as a full path and returned as-is.
 //
-extern void swPluginResolve(const char* baseDir, const char* category, const char* subcategory, const char* name, char* pathOut, int pathSize);
+extern void corPluginResolve(const char* baseDir, const char* category, const char* subcategory, const char* name, char* pathOut, int pathSize);
 
 
 
 // -----------------------------------------------------------------------------
 //
-// swPluginArgUpdate - update a CLI arg's description with available plugin names
+// corPluginArgUpdate - update a CLI arg's description with available plugin names
 //
 // Scans baseDir/subDir for .so files and sets the named arg's description
 // to the list of plugin names (e.g. "dummy|mongoc").
 //
-extern void swPluginArgUpdate(const char* argLongName, const char* subDir);
+extern void corPluginArgUpdate(const char* argLongName, const char* subDir);
 
-#endif  // SWPLUGIN_SWPLUGIN_H_
+#endif  // CORPLUGIN_H_

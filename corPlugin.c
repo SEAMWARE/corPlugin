@@ -1,5 +1,5 @@
 //
-// FILE            swPlugin.c
+// FILE            corPlugin.c
 //
 // AUTHOR          Ken Zangelin
 //
@@ -20,7 +20,7 @@
 #include <dlfcn.h>                                    // dlopen, dlsym, dlclose, dlerror
 #include <dirent.h>                                   // opendir, readdir, closedir
 #include <stdio.h>                                    // snprintf, fprintf
-#include <stdlib.h>                                   // getenv
+#include <stdlib.h>                                   // getenv, qsort
 #include <string.h>                                   // strcmp, strchr, strncpy, strlen, memcpy
 #include <stddef.h>                                   // NULL
 #include <unistd.h>                                   // access
@@ -29,8 +29,8 @@
 #include "kargs/KArgInfo.h"                           // KArgInfo
 #include "kargs/kargsInit.h"                          // kargInfoV
 
-#include "swPlugin/version.h"                         // SWPLUGIN_VERSION
-#include "swPlugin/swPlugin.h"                        // Own interface
+#include "corPlugin/version.h"                         // CORPLUGIN_VERSION
+#include "corPlugin/corPlugin.h"                        // Own interface
 
 
 
@@ -47,7 +47,7 @@ static int    pluginHandleCount = 0;
 
 // -----------------------------------------------------------------------------
 //
-// Base directory state (set by swPluginSetBaseDir)
+// Base directory state (set by corPluginSetBaseDir)
 //
 static const char* baseDir = NULL;
 
@@ -55,20 +55,20 @@ static const char* baseDir = NULL;
 
 // -----------------------------------------------------------------------------
 //
-// swPluginVersion -
+// corPluginVersion -
 //
-const char* swPluginVersion(void)
+const char* corPluginVersion(void)
 {
-  return SWPLUGIN_VERSION;
+  return CORPLUGIN_VERSION;
 }
 
 
 
 // -----------------------------------------------------------------------------
 //
-// swPluginSetBaseDir -
+// corPluginSetBaseDir -
 //
-const char* swPluginSetBaseDir(const char* defaultDir, const char* envVarName)
+const char* corPluginSetBaseDir(const char* defaultDir, const char* envVarName)
 {
   if (envVarName != NULL)
   {
@@ -89,9 +89,9 @@ const char* swPluginSetBaseDir(const char* defaultDir, const char* envVarName)
 
 // -----------------------------------------------------------------------------
 //
-// swPluginBaseDir -
+// corPluginBaseDir -
 //
-const char* swPluginBaseDir(void)
+const char* corPluginBaseDir(void)
 {
   return baseDir;
 }
@@ -100,9 +100,9 @@ const char* swPluginBaseDir(void)
 
 // -----------------------------------------------------------------------------
 //
-// swPluginOpen -
+// corPluginOpen -
 //
-void* swPluginOpen(const char* path, const char* symbolName, char* errorBuf, int errorBufSize)
+void* corPluginOpen(const char* path, const char* symbolName, char* errorBuf, int errorBufSize)
 {
   if (errorBuf != NULL && errorBufSize > 0)
     errorBuf[0] = 0;
@@ -143,9 +143,9 @@ void* swPluginOpen(const char* path, const char* symbolName, char* errorBuf, int
 
 // -----------------------------------------------------------------------------
 //
-// swPluginCloseAll -
+// corPluginCloseAll -
 //
-void swPluginCloseAll(void)
+void corPluginCloseAll(void)
 {
   for (int i = 0; i < pluginHandleCount; i++)
   {
@@ -163,36 +163,67 @@ void swPluginCloseAll(void)
 
 // -----------------------------------------------------------------------------
 //
-// swPluginScanNames -
+// corPluginScanNames -
 //
-const char* swPluginScanNames(const char* dirPath, char sep, char* buf, int bufSize)
+// -----------------------------------------------------------------------------
+//
+// CORPLUGIN_SCAN_MAX / CORPLUGIN_NAME_MAX - bounds for corPluginScanNames
+//
+// A plugin category holds a handful of .so files; both bounds are far above
+// anything real, and both are enforced rather than assumed.
+//
+#define CORPLUGIN_SCAN_MAX  32
+#define CORPLUGIN_NAME_MAX  64
+
+
+
+// -----------------------------------------------------------------------------
+//
+// nameCompare - qsort callback over the fixed-width name array
+//
+static int nameCompare(const void* p1, const void* p2)
+{
+  return strcmp((const char*) p1, (const char*) p2);
+}
+
+
+
+// -----------------------------------------------------------------------------
+//
+// corPluginScanNames -
+//
+// The names come out sorted. readdir returns directory order, which is whatever
+// the filesystem happens to hold - reinstalling a plugin reorders it. That order
+// reaches the user through the --database/--troe usage strings, so without the
+// sort the usage output differs between two identical installations.
+//
+const char* corPluginScanNames(const char* dirPath, char sep, char* buf, int bufSize)
 {
   DIR* dir = opendir(dirPath);
   if (dir == NULL)
     return NULL;
 
-  int pos   = 0;
-  int count = 0;
+  char           nameV[CORPLUGIN_SCAN_MAX][CORPLUGIN_NAME_MAX];
+  int            count = 0;
   struct dirent* entry;
 
   while ((entry = readdir(dir)) != NULL)
   {
     const char* name = entry->d_name;
-    int len = strlen(name);
+    int         len  = strlen(name);
 
     if (len < 4 || strcmp(name + len - 3, ".so") != 0)
       continue;
 
-    if (count > 0 && pos < bufSize - 1)
-      buf[pos++] = sep;
-
     int nameLen = len - 3;  // strip ".so"
-    if (pos + nameLen < bufSize)
-    {
-      memcpy(buf + pos, name, nameLen);
-      pos += nameLen;
-    }
 
+    if (count >= CORPLUGIN_SCAN_MAX)
+      continue;
+    if (nameLen >= CORPLUGIN_NAME_MAX)
+      continue;
+
+    memcpy(nameV[count], name, nameLen);
+    nameV[count][nameLen] = '\0';
     count++;
   }
 
@@ -200,6 +231,23 @@ const char* swPluginScanNames(const char* dirPath, char sep, char* buf, int bufS
 
   if (count == 0)
     return NULL;
+
+  qsort(nameV, count, CORPLUGIN_NAME_MAX, nameCompare);
+
+  int pos = 0;
+  for (int ix = 0; ix < count; ix++)
+  {
+    int nameLen = strlen(nameV[ix]);
+
+    if (ix > 0 && pos < bufSize - 1)
+      buf[pos++] = sep;
+
+    if (pos + nameLen < bufSize)
+    {
+      memcpy(buf + pos, nameV[ix], nameLen);
+      pos += nameLen;
+    }
+  }
 
   buf[pos] = '\0';
   return buf;
@@ -209,9 +257,9 @@ const char* swPluginScanNames(const char* dirPath, char sep, char* buf, int bufS
 
 // -----------------------------------------------------------------------------
 //
-// swPluginResolve -
+// corPluginResolve -
 //
-void swPluginResolve(const char* pluginBaseDir, const char* category, const char* subcategory, const char* name, char* pathOut, int pathSize)
+void corPluginResolve(const char* pluginBaseDir, const char* category, const char* subcategory, const char* name, char* pathOut, int pathSize)
 {
   if (strchr(name, '/') != NULL)
   {
@@ -230,11 +278,11 @@ void swPluginResolve(const char* pluginBaseDir, const char* category, const char
 
 // -----------------------------------------------------------------------------
 //
-// swPluginArgUpdate - update a CLI arg's description with available plugin names
+// corPluginArgUpdate - update a CLI arg's description with available plugin names
 //
 #define ARG_UPDATE_MAX  8
 
-void swPluginArgUpdate(const char* argLongName, const char* subDir)
+void corPluginArgUpdate(const char* argLongName, const char* subDir)
 {
   static char  namesBufV[ARG_UPDATE_MAX][256];
   static int   namesBufIx = 0;
@@ -246,7 +294,7 @@ void swPluginArgUpdate(const char* argLongName, const char* subDir)
   snprintf(dirPath, sizeof(dirPath), "%s/%s", baseDir, subDir);
 
   char* buf = namesBufV[namesBufIx];
-  const char* names = swPluginScanNames(dirPath, '|', buf, sizeof(namesBufV[0]));
+  const char* names = corPluginScanNames(dirPath, '|', buf, sizeof(namesBufV[0]));
 
   if (names == NULL)
     return;

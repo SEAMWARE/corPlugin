@@ -1,5 +1,5 @@
-#ifndef SWPLUGIN_VERSION_H_
-#define SWPLUGIN_VERSION_H_
+#ifndef CORPLUGIN_VERSION_H_
+#define CORPLUGIN_VERSION_H_
 
 //
 // FILE            version.h
@@ -20,6 +20,6 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //
-#define SWPLUGIN_VERSION "0.1.0"
+#define CORPLUGIN_VERSION "0.1.0"
 
-#endif  // SWPLUGIN_VERSION_H_
+#endif  // CORPLUGIN_VERSION_H_
