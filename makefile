@@ -23,7 +23,7 @@ LIB           = libcorPlugin.a
 CC            = gcc
 INCLUDE       = -I..
 DFLAGS        =
-CFLAGS        = -O2 -Wall -fPIC -Wno-unused-function -fstack-protector-all $(DFLAGS) $(INCLUDE) -MMD -MP
+CFLAGS        = -O2 -Wall -Werror -fPIC -Wno-unused-function -fstack-protector-all $(DFLAGS) $(INCLUDE) -MMD -MP
 LIB_SOURCES   = corPlugin.c
 LIB_OBJS      = $(LIB_SOURCES:c=o)
 LIB_DEPS      = $(LIB_SOURCES:c=d)
