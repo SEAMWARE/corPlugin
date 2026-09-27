@@ -28,11 +28,11 @@ LIB_SOURCES   = corPlugin.c
 LIB_OBJS      = $(LIB_SOURCES:c=o)
 LIB_DEPS      = $(LIB_SOURCES:c=d)
 
-SO_LDFLAGS    = -L../kargs
-SO_LIBS       = -lkargs -ldl -lpthread
-SO_RPATH      = -Wl,-rpath,'$$ORIGIN/../kargs'
+SO_LDFLAGS    = -L../corArgs
+SO_LIBS       = -lcorArgs -ldl -lpthread
+SO_RPATH      = -Wl,-rpath,'$$ORIGIN/../corArgs'
 
-LIBS          = ../kargs/libkargs.a -ldl -lpthread
+LIBS          = ../corArgs/libcorArgs.a -ldl -lpthread
 
 all: $(LIB_SO) $(LIB)
 

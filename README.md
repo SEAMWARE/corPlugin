@@ -111,6 +111,6 @@ re-linking shared libraries.
 
 ## Dependencies
 
-- [`kargs`](https://gitlab.com/kzangeli/kargs) — CLI argument handling (used by `corPluginArgUpdate`)
+- [`corArgs`](https://github.com/SEAMWARE/corArgs) — CLI argument handling (used by `corPluginArgUpdate`)
 - `dl` — the dynamic-loader (`dlopen`/`dlsym`/`dlclose`)
 - `pthread`
