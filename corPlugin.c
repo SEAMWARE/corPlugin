@@ -26,9 +26,9 @@
 #include <stddef.h>                                   // NULL
 #include <unistd.h>                                   // access
 
-#include "kargs/KArg.h"                               // KArg, KARGS_END
-#include "kargs/KArgInfo.h"                           // KArgInfo
-#include "kargs/kargsInit.h"                          // kargInfoV
+#include "corArgs/CorArg.h"                           // CorArg, CORARGS_END
+#include "corArgs/CorArgInfo.h"                       // CorArgInfo
+#include "corArgs/corArgsInit.h"                      // corArgInfoV
 
 #include "corPlugin/version.h"                         // CORPLUGIN_VERSION
 #include "corPlugin/corPlugin.h"                        // Own interface
@@ -302,11 +302,11 @@ void corPluginArgUpdate(const char* argLongName, const char* subDir)
 
   namesBufIx++;
 
-  for (int i = 0; kargInfoV[i].type != KaEnd; i++)
+  for (int i = 0; corArgInfoV[i].type != CorArgEnd; i++)
   {
-    if (kargInfoV[i].longName != NULL && strcmp(kargInfoV[i].longName, argLongName) == 0)
+    if (corArgInfoV[i].longName != NULL && strcmp(corArgInfoV[i].longName, argLongName) == 0)
     {
-      kargInfoV[i].description = buf;
+      corArgInfoV[i].description = buf;
       break;
     }
   }
