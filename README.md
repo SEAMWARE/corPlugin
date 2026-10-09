@@ -4,8 +4,8 @@ A small, dependency-light wrapper around `dlopen`/`dlsym` for C: it resolves a
 short plugin **name** to a `.so` path under a configurable base directory, opens it,
 looks up a named register symbol, and tracks every handle so they can all be closed
 at shutdown. The coraine NGSI-LD context broker uses it to load its database,
-temporal and API plugins, but the library knows nothing about any of those — it is a
-generic loader.
+temporal, API, transport and bridge plugins, but the library knows nothing about any
+of those — it is a generic loader.
 
 - **Version:** 0.1.0
 - **Language:** C
@@ -18,8 +18,8 @@ generic loader.
 - **Name → path** — `category[/subcategory]/name` maps to
   `<base>/<category>/<subcategory>/<name>.so`; a name containing `/` is treated as
   an explicit path and used verbatim.
-- **Open + symbol lookup** — `dlopen` a `.so` and `dlsym` a register symbol in one
-  call, with a caller-supplied error buffer.
+- **Open + symbol lookup** — `dlopen` a `.so` (`RTLD_NOW`) and `dlsym` a register
+  symbol in one call, with a caller-supplied error buffer.
 - **Handle tracking** — every opened handle is remembered and released together via
   a single `corPluginCloseAll()`.
 - **Directory scan** — enumerate the available plugin names in a directory (used to
@@ -104,10 +104,29 @@ make ci         # clean + install
 make di         # debug + install
 ```
 
-`libcorPlugin.a` links statically into its consumers. The consuming binary should be
-linked so that plugin `.so`s can resolve shared symbols back into it at load time
-(e.g. `-rdynamic`), since plugins typically call into the host rather than
-re-linking shared libraries.
+`libcorPlugin.a` links statically into its consumers.
+
+## Symbols a plugin resolves from the host
+
+`corPluginOpen` opens a plugin with `RTLD_NOW`: every undefined symbol of the `.so`
+is resolved at open time, against the libraries it links and the host executable's
+exported symbols. A host that wants its plugins to call into it is linked to export
+its symbols (`-rdynamic`; CMake `ENABLE_EXPORTS`), with the libraries the plugins use
+linked whole (`--whole-archive`) so none is dropped. coraine is linked that way, and
+its plugins call the Cor-Libs (corLog, corAlloc, corJson, corTree, …) without linking
+them.
+
+Such a plugin depends on the host's build, not only on the contract struct it fills:
+
+- a symbol the host does not have fails `corPluginOpen` (the `dlopen` error is in
+  `errorBuf`);
+- a function whose signature, or a type whose layout, differs between the headers
+  the plugin was built against and those the host was built with is **not**
+  detected.
+
+So a plugin that calls into the host is built against the same sources as the host
+that loads it. A contract version a host defines for its plugin structs (coraine's
+`BRIDGE_ABI_VERSION`, `TRANSPORT_ABI_VERSION`) covers those structs only.
 
 ## Dependencies
 
