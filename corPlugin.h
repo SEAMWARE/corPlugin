@@ -56,6 +56,10 @@ extern const char* corPluginBaseDir(void);
 //
 // corPluginOpen - dlopen a .so file and look up a symbol by name
 //
+// The .so is opened with RTLD_NOW: a symbol it needs and neither its own
+// libraries nor the host executable provide fails the open, here, rather than
+// at the first call.
+//
 // Returns the symbol pointer on success, NULL on failure.
 // Tracks handles internally for cleanup via corPluginCloseAll().
 // On failure, writes an error message to errorBuf (if not NULL).
