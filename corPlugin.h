@@ -21,6 +21,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //
+#include <stdbool.h>                                  // bool
 
 
 
@@ -60,11 +61,25 @@ extern const char* corPluginBaseDir(void);
 // libraries nor the host executable provide fails the open, here, rather than
 // at the first call.
 //
+// A plugin built against another CorNode layout than the host (corTree/CorNode.h: corNodeLayout) is
+// refused: NULL, the reason in errorBuf, and corPluginRefused() true from then on.
+//
 // Returns the symbol pointer on success, NULL on failure.
 // Tracks handles internally for cleanup via corPluginCloseAll().
 // On failure, writes an error message to errorBuf (if not NULL).
 //
 extern void* corPluginOpen(const char* path, const char* symbolName, char* errorBuf, int errorBufSize);
+
+
+
+// -----------------------------------------------------------------------------
+//
+// corPluginRefused - whether corPluginOpen refused a plugin built against another CorNode layout
+//
+// The host's start-up ends at the refusal's message: carrying on would parse the command line without the
+// plugin's options, and report one of them as unknown.
+//
+extern bool corPluginRefused(void);
 
 
 
