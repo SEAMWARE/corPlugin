@@ -55,6 +55,7 @@ static int    pluginHandleCount = 0;
 // Base directory state (set by corPluginSetBaseDir)
 //
 static const char* baseDir = NULL;
+static bool        refused = false;      // a plugin built against another CorNode layout - corPluginRefused
 
 
 
@@ -184,10 +185,22 @@ void* corPluginOpen(const char* path, const char* symbolName, char* errorBuf, in
     }
     dlclose(handle);
     pluginHandleCount--;
+    refused = true;
     return NULL;
   }
 
   return sym;
+}
+
+
+
+// -----------------------------------------------------------------------------
+//
+// corPluginRefused -
+//
+bool corPluginRefused(void)
+{
+  return refused;
 }
 
 
