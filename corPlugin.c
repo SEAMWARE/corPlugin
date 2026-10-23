@@ -18,7 +18,9 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //
-#include <dlfcn.h>                                    // dlopen, dlsym, dlclose, dlerror
+#define _GNU_SOURCE                                   // dladdr
+
+#include <dlfcn.h>                                    // dlopen, dlsym, dlclose, dlerror, dladdr
 #include <dirent.h>                                   // opendir, readdir, closedir
 #include <stdio.h>                                    // snprintf, fprintf
 #include <stdlib.h>                                   // getenv, qsort
@@ -29,6 +31,8 @@
 #include "corArgs/CorArg.h"                           // CorArg, CORARGS_END
 #include "corArgs/CorArgInfo.h"                       // CorArgInfo
 #include "corArgs/corArgsInit.h"                      // corArgInfoV
+
+#include "corTree/CorNode.h"                          // corNodeLayout
 
 #include "corPlugin/version.h"                         // CORPLUGIN_VERSION
 #include "corPlugin/corPlugin.h"                        // Own interface
@@ -101,6 +105,30 @@ const char* corPluginBaseDir(void)
 
 // -----------------------------------------------------------------------------
 //
+// nodeLayout - the CorNode layout a plugin was built against (corTree/CorNode.h: corNodeLayout), 0 if it has none
+//
+// The plugin's OWN corNodeLayout: the one in the object its entry point 'sym' is in. dlsym on the handle
+// searches the plugin's dependencies too, and one of them may have been built against other headers.
+//
+static int nodeLayout(void* handle, void* sym)
+{
+  const int* layoutP = (const int*) dlsym(handle, "corNodeLayout");
+  Dl_info    symInfo;
+  Dl_info    layoutInfo;
+
+  if ((layoutP == NULL) || (dladdr(sym, &symInfo) == 0) || (dladdr(layoutP, &layoutInfo) == 0))
+    return 0;
+
+  if (symInfo.dli_fbase != layoutInfo.dli_fbase)
+    return 0;
+
+  return *layoutP;
+}
+
+
+
+// -----------------------------------------------------------------------------
+//
 // corPluginOpen -
 //
 void* corPluginOpen(const char* path, const char* symbolName, char* errorBuf, int errorBufSize)
@@ -132,6 +160,28 @@ void* corPluginOpen(const char* path, const char* symbolName, char* errorBuf, in
   {
     if (errorBuf != NULL)
       snprintf(errorBuf, errorBufSize, "dlsym(%s, %s) failed: %s", path, symbolName, dlerror());
+    dlclose(handle);
+    pluginHandleCount--;
+    return NULL;
+  }
+
+  int layout = nodeLayout(handle, sym);
+  if (layout != corNodeLayout)
+  {
+    if (errorBuf != NULL)
+    {
+      char built[64];
+
+      if (layout == 0)
+        snprintf(built, sizeof(built), "layout 1, or older - it has no corNodeLayout");
+      else
+        snprintf(built, sizeof(built), "layout %d", layout);
+
+      snprintf(errorBuf, errorBufSize,
+               "refused - built against another tree-node layout than this broker (plugin: CorNode %s; broker: CorNode layout %d). "
+               "It would read every node at the wrong offsets and crash the broker. Rebuild the plugin against this broker's Cor-Libs",
+               built, corNodeLayout);
+    }
     dlclose(handle);
     pluginHandleCount--;
     return NULL;
