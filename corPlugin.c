@@ -41,12 +41,35 @@
 
 // -----------------------------------------------------------------------------
 //
-// Plugin handle tracking (for dlclose on shutdown)
+// Plugin handle tracking (for dlclose on shutdown) - every plugin opened, as many as there are
 //
-#define PLUGIN_HANDLES_MAX  32
-
-static void*  pluginHandles[PLUGIN_HANDLES_MAX];
+static void** pluginHandles     = NULL;
 static int    pluginHandleCount = 0;
+static int    pluginHandleSize  = 0;
+
+
+
+// -----------------------------------------------------------------------------
+//
+// handleTrack - remember a plugin's handle, for corPluginCloseAll; false if out of memory
+//
+static bool handleTrack(void* handle)
+{
+  if (pluginHandleCount == pluginHandleSize)
+  {
+    int    size     = (pluginHandleSize == 0)? 32 : pluginHandleSize * 2;
+    void** handlesP = (void**) realloc(pluginHandles, size * sizeof(void*));
+
+    if (handlesP == NULL)
+      return false;
+
+    pluginHandles    = handlesP;
+    pluginHandleSize = size;
+  }
+
+  pluginHandles[pluginHandleCount++] = handle;
+  return true;
+}
 
 
 
@@ -152,17 +175,12 @@ void* corPluginOpen(const char* path, const char* symbolName, char* errorBuf, in
     return NULL;
   }
 
-  // Track handle for cleanup
-  if (pluginHandleCount < PLUGIN_HANDLES_MAX)
-    pluginHandles[pluginHandleCount++] = handle;
-
   void* sym = dlsym(handle, symbolName);
   if (sym == NULL)
   {
     if (errorBuf != NULL)
       snprintf(errorBuf, errorBufSize, "dlsym(%s, %s) failed: %s", path, symbolName, dlerror());
     dlclose(handle);
-    pluginHandleCount--;
     return NULL;
   }
 
@@ -184,8 +202,16 @@ void* corPluginOpen(const char* path, const char* symbolName, char* errorBuf, in
                built, corNodeLayout);
     }
     dlclose(handle);
-    pluginHandleCount--;
     refused = true;
+    return NULL;
+  }
+
+  // Tracked once it is open for good, for corPluginCloseAll - a handle closed above is never in the list
+  if (handleTrack(handle) == false)
+  {
+    if (errorBuf != NULL)
+      snprintf(errorBuf, errorBufSize, "out of memory tracking the handle of %s", path);
+    dlclose(handle);
     return NULL;
   }
 

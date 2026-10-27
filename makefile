@@ -29,10 +29,10 @@ LIB_OBJS      = $(LIB_SOURCES:c=o)
 LIB_DEPS      = $(LIB_SOURCES:c=d)
 
 SO_LDFLAGS    = -L../corArgs
-SO_LIBS       = -lcorArgs -ldl -lpthread
+SO_LIBS       = -lcorArgs -ldl
 SO_RPATH      = -Wl,-rpath,'$$ORIGIN/../corArgs'
 
-LIBS          = ../corArgs/libcorArgs.a -ldl -lpthread
+LIBS          = ../corArgs/libcorArgs.a -ldl
 
 all: $(LIB_SO) $(LIB)
 

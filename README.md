@@ -20,8 +20,11 @@ of those — it is a generic loader.
   an explicit path and used verbatim.
 - **Open + symbol lookup** — `dlopen` a `.so` (`RTLD_NOW`) and `dlsym` a register
   symbol in one call, with a caller-supplied error buffer.
-- **Handle tracking** — every opened handle is remembered and released together via
-  a single `corPluginCloseAll()`.
+- **Handle tracking** — every plugin opened (as many as there are) is remembered and
+  released together via a single `corPluginCloseAll()`; a failed open closes its handle at once.
+- **Layout check** — a plugin built against another `CorNode` layout than the host
+  (corTree's `CorNode.h`: `corNodeLayout`) is refused instead of reading every tree node
+  at the wrong offsets; `corPluginRefused()` says one was.
 - **Directory scan** — enumerate the available plugin names in a directory (used to
   fill in `--help` text for plugin-selecting CLI args).
 
@@ -42,7 +45,12 @@ const char* corPluginBaseDir(void);
 
 // dlopen `path` and dlsym `symbolName`. Returns the symbol pointer, or NULL on
 // failure (writing a message into errorBuf). The handle is tracked internally.
+// A plugin whose corNodeLayout is not the host's (or that has none: layout 1 or
+// older) is refused - NULL, the reason in errorBuf.
 void* corPluginOpen(const char* path, const char* symbolName, char* errorBuf, int errorBufSize);
+
+// true once corPluginOpen has refused a plugin for its CorNode layout
+bool  corPluginRefused(void);
 
 // dlclose every handle opened so far.
 void  corPluginCloseAll(void);
@@ -131,5 +139,5 @@ that loads it. A contract version a host defines for its plugin structs (coraine
 ## Dependencies
 
 - [`corArgs`](https://github.com/SEAMWARE/corArgs) — CLI argument handling (used by `corPluginArgUpdate`)
-- `dl` — the dynamic-loader (`dlopen`/`dlsym`/`dlclose`)
-- `pthread`
+- [`corTree`](https://github.com/SEAMWARE/corTree) — `CorNode.h` only, for `corNodeLayout` (the layout check); nothing linked
+- `dl` — the dynamic-loader (`dlopen`/`dlsym`/`dladdr`/`dlclose`)
