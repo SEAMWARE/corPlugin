@@ -65,7 +65,8 @@ extern const char* corPluginBaseDir(void);
 // refused: NULL, the reason in errorBuf, and corPluginRefused() true from then on.
 //
 // Returns the symbol pointer on success, NULL on failure.
-// Tracks handles internally for cleanup via corPluginCloseAll().
+// The handle of a plugin opened is tracked, for corPluginCloseAll() - as many as are opened; a failed
+// open closes its handle at once.
 // On failure, writes an error message to errorBuf (if not NULL).
 //
 extern void* corPluginOpen(const char* path, const char* symbolName, char* errorBuf, int errorBufSize);
